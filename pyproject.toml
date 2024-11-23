@@ -63,10 +63,9 @@ pre = [
 ]
 # Add DVP support with WSI images proteomics readers
 dvp = [
-    openslide-python,
-    openslide-bin,
-    alphabase
-]
+    "openslide-python",
+    "openslide-bin"
+    ]
 
 [tool.coverage.run]
 source = ["spatialdata_io"]
