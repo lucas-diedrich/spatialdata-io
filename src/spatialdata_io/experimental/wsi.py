@@ -80,7 +80,6 @@ def read_wsi(
     to a lazy dask array. Currently supported formats
 
     [tested]
-    - .czi (Carl Zeiss proprietary format)
     - .mirax (Mirax format)
 
     [in principle supported by openslide]
