@@ -25,9 +25,9 @@ def _create_tiles(
         Array in the shape (n_tile_x, n_tile_y, 2) where the last dimension
         indicates the upper left corner of each tile (x, y).
     """
-    # make sure
+
     n_tile_x = int(np.ceil(dimensions[0] / tile_size[0]))
-    n_tile_y = int(np.ceil(dimensions[1] // tile_size[1]))
+    n_tile_y = int(np.ceil(dimensions[1] / tile_size[1]))
 
     xend = n_tile_x * tile_size[0]
     yend = n_tile_y * tile_size[1]
@@ -108,10 +108,10 @@ def read_wsi(
     dask.array
     """
 
-    slide = openslide.ImageSlide(path)
+    slide = openslide.OpenSlide(path)
 
     # Image is represented as pyramid. Read highest resolution
-    dimensions = slide.dimensions
+    dimensions = slide.level_dimensions[0]
 
     # Openslide represents downsamples in format (level[0], level[1], ...)
     # Each level is relative to top level
@@ -134,11 +134,11 @@ def read_wsi(
         [
             _get_img(
                 slide=slide,
-                chunk_coords=chunk_coords[row, col],
+                coords=chunk_coords[row, col],
             )
-            for row in chunk_coords.shape[0]
+            for row in range(chunk_coords.shape[0])
         ]
-        for col in chunk_coords.shape[1]
+        for col in range(chunk_coords.shape[1])
     ]
 
     # Delayed
@@ -146,9 +146,9 @@ def read_wsi(
 
     array = da.from_delayed(array, shape=(4, *chunksize[::-1]), dtype=np.uint8)
 
-    return Image2DModel(
+    return Image2DModel.parse(
         array,
-        dims=("c", "y", "x"),
-        c_coords=("r", "g", "b", "a"),
+        dims="cyx",
+        c_coords="rgba",
         scale_factors=scale_factors,
     )
