@@ -9,7 +9,7 @@ from spatialdata.models import Image2DModel
 
 def _create_tiles(
     dimensions: tuple[int, int], tile_size: tuple[int, int]
-) -> np.ndarray:
+) -> tuple[np.ndarray, int, int]:
     """Tiling of WSI in digestible, rectangular chunks
 
     Parameters
@@ -21,26 +21,28 @@ def _create_tiles(
 
     Returns
     -------
-    np.ndarray
-        Array in the shape (n_tile_x, n_tile_y, 2) where the last dimension
+    tuple[np.ndarray, int, int]
+        - Array in the shape (n_tile_x, n_tile_y, 2) where the last dimension
         indicates the upper left corner of each tile (x, y).
+        - maximum value in x coordinates
+        - maximum value in y coordinates
     """
 
     n_tile_x = int(np.ceil(dimensions[0] / tile_size[0]))
     n_tile_y = int(np.ceil(dimensions[1] / tile_size[1]))
 
-    xend = n_tile_x * tile_size[0]
-    yend = n_tile_y * tile_size[1]
+    xmax = int(n_tile_x * tile_size[0])
+    ymax = int(n_tile_y * tile_size[1])
 
     # Get all grid points
     x, y = np.meshgrid(
-        np.arange(0, int(xend), tile_size[0]),
-        np.arange(0, int(yend), tile_size[1]),
+        np.arange(0, xmax, tile_size[0]),
+        np.arange(0, ymax, tile_size[1]),
     )
 
     tile_coords = np.stack([x, y], axis=-1)
 
-    return tile_coords
+    return tile_coords, xmax, ymax
 
 
 @delayed
@@ -70,7 +72,7 @@ def _assemble_delayed(chunks: list[list]):
 
 
 def read_wsi(
-    path: str, chunksize=(10000, 10000), pyramidal: bool = True
+    path: str, chunk_size=(10000, 10000), pyramidal: bool = True
 ) -> Image2DModel:
     """Read WSI to Image2DModel
 
@@ -98,7 +100,7 @@ def read_wsi(
     ----------
     path
         Path to file
-    chunksize
+    chunk_size
         Size of the individual regions that are read into memory during the process
     pyramidal
         Whether to create a pyramidal image with same scales as original image
@@ -111,10 +113,10 @@ def read_wsi(
     slide = openslide.OpenSlide(path)
 
     # Image is represented as pyramid. Read highest resolution
-    dimensions = slide.level_dimensions[0]
+    dimensions = slide.dimensions
 
-    # Openslide represents downsamples in format (level[0], level[1], ...)
-    # Each level is relative to top level
+    # Openslide represents scales in format (level[0], level[1], ...)
+    # Each scale factor is represented relative to top level
     # Get downsamples in format that can be passed to Image2DModel
     scale_factors = None
     if pyramidal:
@@ -124,7 +126,9 @@ def read_wsi(
         ]
 
     # Define coordinates for chunkwise loading of the slide
-    chunk_coords = _create_tiles(dimensions=dimensions, tile_size=chunksize)
+    chunk_coords, xmax, ymax = _create_tiles(
+        dimensions=dimensions, tile_size=chunk_size
+    )
 
     # Collect each delayed chunk as item in list of list
     # Inner list becomes dim=-1 (rows)
@@ -133,8 +137,7 @@ def read_wsi(
     chunks = [
         [
             _get_img(
-                slide=slide,
-                coords=chunk_coords[row, col],
+                slide=slide, coords=chunk_coords[row, col], size=chunk_size, level=0
             )
             for row in range(chunk_coords.shape[0])
         ]
@@ -142,13 +145,15 @@ def read_wsi(
     ]
 
     # Delayed
-    array = _assemble_delayed(chunks)
-
-    array = da.from_delayed(array, shape=(4, *chunksize[::-1]), dtype=np.uint8)
+    array_ = _assemble_delayed(chunks)
+    array = da.from_delayed(array_, shape=(4, ymax, xmax), dtype=np.uint8).rechunk(
+        chunks=(4, *chunk_size[::-1])
+    )
 
     return Image2DModel.parse(
         array,
         dims="cyx",
         c_coords="rgba",
         scale_factors=scale_factors,
+        chunks=chunk_size,
     )
