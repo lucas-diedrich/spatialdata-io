@@ -26,10 +26,11 @@ def test__create_tiles(
 
 
 @pytest.mark.parametrize(
-    ("dataset", "xmin", "xmax", "ymin", "ymax"),
+    ("dataset", "xmin", "ymin", "xmax", "ymax"),
     [
-        # Use weird coords as most of the WSI is empty
         ("Mirax2.2-4-PNG.mrxs", 0, 0, 1000, 1000),
+        # Asymmetric
+        ("Mirax2.2-4-PNG.mrxs", 0, 0, 500, 1000),
     ],
 )
 def test_read_wsi_pyramid(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int) -> None:
@@ -38,13 +39,13 @@ def test_read_wsi_pyramid(dataset: str, xmin: int, xmax: int, ymin: int, ymax: i
     image_model = read_wsi(path, pyramidal=True)
 
     # Get a subset of the image
-    test_image = image_model.scale0.image[:, ymin:ymax, xmin:xmax].to_numpy()
+    test_image = image_model.scale0.image[:, ymin:ymax, xmin:xmax].transpose("y", "x", "c").to_numpy()
 
     # Read image directly with openslide
     slide = openslide.OpenSlide(path)
     ref_image = np.array(slide.read_region((xmin, ymin), level=0, size=(xmax - xmin, ymax - ymin)))
 
-    assert (test_image == ref_image.T).all()
+    assert (test_image == ref_image).all()
 
 
 @pytest.mark.parametrize(

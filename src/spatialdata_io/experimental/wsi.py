@@ -26,21 +26,18 @@ def _create_tiles(dimensions: tuple[int, int], tile_size: tuple[int, int]) -> tu
         - maximum value in y coordinates
 
     """
-    n_tile_x = int(np.ceil(dimensions[0] / tile_size[0]))
-    n_tile_y = int(np.ceil(dimensions[1] / tile_size[1]))
+    n_tile_row = int(np.ceil(dimensions[0] / tile_size[0]))
+    n_tile_col = int(np.ceil(dimensions[1] / tile_size[1]))
 
-    xmax = int(n_tile_x * tile_size[0])
-    ymax = int(n_tile_y * tile_size[1])
+    row_max = int(n_tile_row * tile_size[0])
+    col_max = int(n_tile_col * tile_size[1])
 
     # Get all grid points
-    x, y = np.meshgrid(
-        np.arange(0, xmax, tile_size[0]),
-        np.arange(0, ymax, tile_size[1]),
-    )
+    cols, rows = np.meshgrid(np.arange(0, row_max, tile_size[0]), np.arange(0, col_max, tile_size[1]))
 
-    tile_coords = np.stack([x.T, y.T], axis=-1)
+    tile_coords = np.stack([rows.T, cols.T], axis=-1)
 
-    return tile_coords, xmax, ymax
+    return tile_coords, row_max, col_max
 
 
 @delayed
