@@ -115,7 +115,7 @@ def read_wsi(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyramidal:
 
     Returns
     -------
-    dask.array
+    Image2DModel
     """
     slide = openslide.OpenSlide(path)
 
