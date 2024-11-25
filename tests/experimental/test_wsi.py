@@ -33,7 +33,7 @@ def test__create_tiles(
         ("Mirax2.2-4-PNG.mrxs", 0, 0, 500, 1000),
     ],
 )
-def test_read_wsi_pyramid(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int) -> None:
+def test_read_wsi(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int) -> None:
     """Test whether image can be loaded"""
     path = f"./data/wsi/mirax/{dataset}"
     image_model = read_wsi(path, pyramidal=True)
