@@ -1,15 +1,14 @@
 """Reader for Whole Slide Images"""
 
-import openslide
 import dask.array as da
-from dask import delayed
 import numpy as np
+import openslide
+from dask import delayed
+from numpy.typing import NDArray
 from spatialdata.models import Image2DModel
 
 
-def _create_tiles(
-    dimensions: tuple[int, int], tile_size: tuple[int, int]
-) -> tuple[np.ndarray, int, int]:
+def _create_tiles(dimensions: tuple[int, int], tile_size: tuple[int, int]) -> tuple[NDArray, int, int]:
     """Tiling of WSI in digestible, rectangular chunks
 
     Parameters
@@ -21,13 +20,12 @@ def _create_tiles(
 
     Returns
     -------
-    tuple[np.ndarray, int, int]
-        - Array in the shape (n_tile_x, n_tile_y, 2) where the last dimension
-        indicates the upper left corner of each tile (x, y).
+    tuple[np.NDArray, int, int]
+        - Array in the shape (n_tile_x, n_tile_y, 2) where the last dimension indicates the upper left corner of each tile (x, y).
         - maximum value in x coordinates
         - maximum value in y coordinates
-    """
 
+    """
     n_tile_x = int(np.ceil(dimensions[0] / tile_size[0]))
     n_tile_y = int(np.ceil(dimensions[1] / tile_size[1]))
 
@@ -40,7 +38,7 @@ def _create_tiles(
         np.arange(0, ymax, tile_size[1]),
     )
 
-    tile_coords = np.stack([x, y], axis=-1)
+    tile_coords = np.stack([x.T, y.T], axis=-1)
 
     return tile_coords, xmax, ymax
 
@@ -51,11 +49,24 @@ def _get_img(
     coords: tuple[int, int],
     size: tuple[int, int],
     level: int,
-) -> np.array:
+) -> NDArray:
     """Return numpy array of slide region
 
     Parameters
     ----------
+    slide
+        WSI
+    coords
+        Upper left corner (x, y) to read
+    size
+        Size of tile
+    level
+        Level in pyramidal image format
+
+    Returns
+    -------
+    np.array
+        Image in (c, y, x) format and RGBA channels
     """
     # Openslide returns a PILLOW image in RGBA format
     # Shape (x, y, c)
@@ -66,14 +77,12 @@ def _get_img(
 
 
 @delayed
-def _assemble_delayed(chunks: list[list]):
+def _assemble_delayed(chunks: list[list[NDArray]]) -> NDArray:
     """Assemble chunks (delayed)"""
     return da.block(chunks)
 
 
-def read_wsi(
-    path: str, chunk_size=(10000, 10000), pyramidal: bool = True
-) -> Image2DModel:
+def read_wsi(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyramidal: bool = True) -> Image2DModel:
     """Read WSI to Image2DModel
 
     Uses openslide to read multiple pathology slide representations and parse them
@@ -108,7 +117,6 @@ def read_wsi(
     -------
     dask.array
     """
-
     slide = openslide.OpenSlide(path)
 
     # Image is represented as pyramid. Read highest resolution
@@ -125,9 +133,7 @@ def read_wsi(
         ]
 
     # Define coordinates for chunkwise loading of the slide
-    chunk_coords, xmax, ymax = _create_tiles(
-        dimensions=dimensions, tile_size=chunk_size
-    )
+    chunk_coords, xmax, ymax = _create_tiles(dimensions=dimensions, tile_size=chunk_size)
 
     # Collect each delayed chunk as item in list of list
     # Inner list becomes dim=-1 (rows)
@@ -135,19 +141,15 @@ def read_wsi(
     # see dask.array.block
     chunks = [
         [
-            _get_img(
-                slide=slide, coords=chunk_coords[row, col], size=chunk_size, level=0
-            )
-            for row in range(chunk_coords.shape[0])
+            _get_img(slide=slide, coords=chunk_coords[x, y], size=chunk_size, level=0)
+            for x in range(chunk_coords.shape[0])
         ]
-        for col in range(chunk_coords.shape[1])
+        for y in range(chunk_coords.shape[1])
     ]
 
     # Delayed
     array_ = _assemble_delayed(chunks)
-    array = da.from_delayed(array_, shape=(4, ymax, xmax), dtype=np.uint8).rechunk(
-        chunks=(4, *chunk_size[::-1])
-    )
+    array = da.from_delayed(array_, shape=(4, ymax, xmax), dtype=np.uint8).rechunk(chunks=(4, *chunk_size[::-1]))
 
     return Image2DModel.parse(
         array,
