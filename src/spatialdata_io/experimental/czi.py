@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import dask.array as da
 import numpy as np
@@ -31,6 +31,47 @@ class CZIPixelType(Enum):
         self.dimensionality = dimensionality
         self.dtype = dtype
         self.c_coords = c_coords
+
+    def __lt__(self, other: "CZIPixelType") -> bool:
+        """Define hierarchy of dtypes according to order of defintion"""
+        if self == other:
+            return False
+        for elem in CZIPixelType:
+            if self == elem:
+                return True
+            elif other == elem:
+                return False
+        raise ValueError("Element not in defined types")
+
+
+def _parse_pixel_type(slide: pyczi.CziReader, channels: Union[int, list[int]]) -> tuple[Any, list[int]]:
+    """Parse CZI channel info and return channel dimensionalities and pixel data types
+
+    Parameters
+    ----------
+    slide
+        CziReader, slide representation
+    channels
+        All channels that are supposed to be parsed
+
+
+    Returns
+    -------
+    (CZIPixelType, list[int])
+        CziPixelType: Pixeltype with the highest complexity to prevent data loss. E.g. if one channel has type uint8 and one has uint16, we parse the image to uint16
+        List of dimensions: List of dimensionalities for all channels. Used to infer total dimensionality of resulting dask array
+
+    """
+    if isinstance(channels, int):
+        channels = [channels]
+
+    pixel_czi_name = [slide.get_channel_pixel_type(c) for c in channels]
+    pixel_spec = [CZIPixelType[c] for c in pixel_czi_name]
+    complex_pixel_spec = max(pixel_spec)
+
+    channel_dim = [c.dimensionality for c in pixel_spec]
+
+    return complex_pixel_spec, channel_dim
 
 
 def _get_img(
@@ -83,7 +124,7 @@ def _get_img(
 def read_czi(
     path: str,
     chunk_size: tuple[int, int] = (10000, 10000),
-    channel: int = 0,
+    channels: Union[int, list[int]] = 0,
     timepoint: int = 0,
     z_stack: int = 0,
     **kwargs: Mapping[str, Any],
@@ -100,7 +141,7 @@ def read_czi(
         Size of the individual regions that are read into memory during the process
     kwargs
         Keyword arguments passed to Image2DModel.parse
-    channel
+    channels
         If multiple channels are available, select these channels
     timepoint
         If timeseries, select the given index (defaults to 0 [first])
@@ -116,27 +157,34 @@ def read_czi(
     # Read dimensions
     xmin, ymin, width, height = czidoc_r.total_bounding_rectangle
 
-    # We need to know the pixel type to infer the dimensionality of the image
-    pixel_type = czidoc_r.get_channel_pixel_type(channel)
-
     # Define coordinates for chunkwise loading of the slide
     chunk_coords = _create_tiles(dimensions=(width, height), tile_size=chunk_size, min_coordinates=(xmin, ymin))
 
-    # TODO Currently, only 1 channel [RGB/grayscale] is read - it might be complicated to read multiple channels
-    # if there are both brightfield (RGB) + fluorescence/grayscale images in the same file
-    chunks = _chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=channel)
+    pixel_spec, channel_dim = _parse_pixel_type(slide=czidoc_r, channels=channels)
+
+    if isinstance(channels, list):
+        # Validate that all channels are grayscale
+        if not all(c == 1 for c in channel_dim):
+            raise ValueError(
+                f"""Not all channels in CZI file are one dimensional (dimensionalities: {channel_dim}).
+                Currently, only 1D channels are supported for multi-channel images"""
+            )
+
+        chunks = [_chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=c) for c in channels]
+    else:
+        chunks = _chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=channels)
 
     array_ = _assemble_delayed(chunks)
 
     array = da.from_delayed(
         array_,
-        shape=(CZIPixelType[pixel_type].dimensionality, width, height),
-        dtype=CZIPixelType[pixel_type].dtype,
+        shape=(sum(channel_dim), width, height),
+        dtype=pixel_spec.dtype,
     )
 
     return Image2DModel.parse(
         array,
         dims="cyx",
-        c_coords=CZIPixelType[pixel_type].c_coords,
+        c_coords=pixel_spec.c_coords,
         **kwargs,
     )
