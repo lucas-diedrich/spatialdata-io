@@ -2,27 +2,7 @@ import numpy as np
 import openslide
 import pytest
 
-from spatialdata_io.experimental.wsi import _create_tiles, read_wsi
-
-
-@pytest.mark.parametrize(
-    ("dimensions", "tile_size", "output_shape", "output_max"),
-    [
-        ((10, 10), (1, 1), (10, 10, 2), (10, 10)),
-        ((10, 10), (2, 1), (5, 10, 2), (10, 10)),
-        ((10, 10), (1, 2), (10, 5, 2), (10, 10)),
-        ((5, 5), (6, 6), (1, 1, 2), (6, 6)),
-    ],
-)
-def test__create_tiles(
-    dimensions: tuple[int, int],
-    tile_size: tuple[int, int],
-    output_shape: tuple[int, int],
-    output_max: tuple[int, int],
-) -> None:
-    array, xmax, ymax = _create_tiles(dimensions, tile_size)
-    assert array.shape == output_shape
-    assert (xmax == output_max[0]) & (ymax == output_max[1])
+from spatialdata_io.experimental.wsi import read_wsi
 
 
 @pytest.mark.parametrize(
