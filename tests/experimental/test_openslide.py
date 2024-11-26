@@ -2,7 +2,7 @@ import numpy as np
 import openslide
 import pytest
 
-from spatialdata_io.experimental.wsi import read_wsi
+from spatialdata_io.experimental.openslide import read_openslide
 
 
 @pytest.mark.parametrize(
@@ -13,10 +13,10 @@ from spatialdata_io.experimental.wsi import read_wsi
         ("Mirax2.2-4-PNG.mrxs", 0, 0, 500, 1000),
     ],
 )
-def test_read_wsi(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int) -> None:
+def test_read_openslide(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int) -> None:
     """Test whether image can be loaded"""
     path = f"./data/wsi/mirax/{dataset}"
-    image_model = read_wsi(path, pyramidal=True)
+    image_model = read_openslide(path, pyramidal=True)
 
     # Get a subset of the image
     test_image = image_model.scale0.image[:, ymin:ymax, xmin:xmax].transpose("y", "x", "c").to_numpy()
@@ -32,10 +32,10 @@ def test_read_wsi(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int) -> N
     "chunk_size",
     [(1000, 1000), (10000, 10000), (10000, 5000)],
 )
-def test_read_wsi_chunksize(chunk_size: tuple[int, int]) -> None:
+def test_read_openslide_chunksize(chunk_size: tuple[int, int]) -> None:
     """Test whether chunking works"""
     path = "./data/wsi/mirax/Mirax2.2-4-PNG.mrxs"
-    image_model = read_wsi(path, chunk_size=chunk_size, pyramidal=False)
+    image_model = read_openslide(path, chunk_size=chunk_size, pyramidal=False)
 
     assert all(
         (
