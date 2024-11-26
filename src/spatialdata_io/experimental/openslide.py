@@ -62,7 +62,7 @@ def read_openslide(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyra
     - Sakura (.svslide)
     - Trestle (.tif)
     - Ventana (.bif, .tif)
-    - Zeiss (.czi)
+    [- Zeiss (.czi)] We recommend to use the read_czi function for this format
     - Generic tiled TIFF (.tif)
 
     Parameters
