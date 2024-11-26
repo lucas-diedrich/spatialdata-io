@@ -6,7 +6,6 @@ on:
     push:
        branches:
            - main
-           - dvp_image_readers
 
 jobs:
     prepare-data:
@@ -22,7 +21,7 @@ jobs:
                   curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_human_Breast_2fov/Xenium_V1_human_Breast_2fov_outs.zip
                   curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_human_Lung_2fov/Xenium_V1_human_Lung_2fov_outs.zip
                   curl -o openslide-mirax.zip https://openslide.cs.cmu.edu/download/openslide-testdata/Mirax/Mirax2.2-4-PNG.zip
-                  curl -o zeiss.zip https://datashare.biochem.mpg.de/s/k2C6sg0qrXBdWdc
+                  curl -o zeiss.zip https://datashare.biochem.mpg.de/s/k2C6sg0qrXBdWdc/download
             - name: Unzip files
               run: |
                   unzip ./data/Xenium_V1_human_Breast_2fov_outs.zip -d ./data/Xenium_V1_human_Breast_2fov_outs
