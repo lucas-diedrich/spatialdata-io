@@ -7,36 +7,48 @@ from dask import delayed
 from numpy.typing import NDArray
 
 
-def _create_tiles(dimensions: tuple[int, int], tile_size: tuple[int, int]) -> tuple[NDArray, int, int]:
-    """Tiling of WSI in digestible, rectangular chunks
+def _create_tiles(
+    dimensions: tuple[int, int],
+    tile_size: tuple[int, int],
+    min_coordinates: tuple[int, int] = (0, 0),
+) -> NDArray[np.int_]:
+    """Create rectangular tiles for a given image size.
 
     Parameters
     ----------
-    dimensions
-        Size of WSI in (x, y)
-    tile_size
-        Size of individual tiles in (x, y)
+    dimensions : tuple[int, int]
+        Size of the image in (width, height).
+    tile_size : tuple[int, int]
+        Size of individual tiles in (width, height).
+    min_coordinates : tuple[int, int], optional
+        Minimum coordinates in the image, defaults to (0, 0).
 
     Returns
     -------
-    tuple[NDArray, int, int]
-        - Array in the shape (n_tile_x, n_tile_y, 2) where the last dimension indicates the upper left corner of each tile (x, y).
-        - maximum value in x coordinates
-        - maximum value in y coordinates
-
+    np.ndarray
+        Array of shape (n_tiles_x, n_tiles_y, 4), where each entry defines a tile
+        as (x, y, width, height).
     """
-    n_tile_row = int(np.ceil(dimensions[0] / tile_size[0]))
-    n_tile_col = int(np.ceil(dimensions[1] / tile_size[1]))
+    # Calculate tile sizes and positions
+    widths = np.full(dimensions[0] // tile_size[0], tile_size[0])
+    remainder_x = dimensions[0] % tile_size[0]
+    if remainder_x > 0:
+        widths = np.append(widths, remainder_x)
 
-    row_max = int(n_tile_row * tile_size[0])
-    col_max = int(n_tile_col * tile_size[1])
+    heights = np.full(dimensions[1] // tile_size[1], tile_size[1])
+    remainder_y = dimensions[1] % tile_size[1]
+    if remainder_y > 0:
+        heights = np.append(heights, remainder_y)
 
-    # Get all grid points
-    cols, rows = np.meshgrid(np.arange(0, row_max, tile_size[0]), np.arange(0, col_max, tile_size[1]))
+    x_positions = min_coordinates[0] + np.cumsum(np.r_[0, widths[:-1]])
+    y_positions = min_coordinates[1] + np.cumsum(np.r_[0, heights[:-1]])
 
-    tile_coords = np.stack([rows.T, cols.T], axis=-1)
-
-    return tile_coords, row_max, col_max
+    # Generate the tiles
+    tiles = np.array(
+        [[[x, y, w, h] for y, h in zip(y_positions, heights)] for x, w in zip(x_positions, widths)],
+        dtype=int,
+    )
+    return tiles
 
 
 @delayed
@@ -44,7 +56,6 @@ def _chunk_factory(
     func: Callable[..., NDArray],
     slide: Any,
     coords: NDArray,
-    size: tuple[int, int],
     **func_kwargs: Mapping[str, Any],
 ) -> list[list[NDArray]]:
     """Abstract factory method to tile a large microscopy image.
@@ -56,8 +67,8 @@ def _chunk_factory(
     slide
         Slide image in format compatible with func
     coords
-        Coordinates of the upper left corner of the image in formt (n_row_x, n_row_y, 2)
-        where the last dimension indicates the position in format (x, y)
+        Coordinates of the upper left corner of the image in formt (n_row_x, n_row_y, 4)
+        where the last dimension defines the rectangular tile in format (x, y, width, height)
     func_kwargs
         Additional keyword arguments passed to func
     """
@@ -68,8 +79,16 @@ def _chunk_factory(
     # Outer list becomes dim=-2 (cols)
     # see dask.array.block
     chunks = [
-        [func(slide, coords=coords[x, y], size=size, **func_kwargs) for x in range(coords.shape[0])]
-        for y in range(coords.shape[1])
+        [
+            func(
+                slide,
+                coords=coords[x, y, [0, 1]],
+                size=coords[x, y, [2, 3]],
+                **func_kwargs,
+            )
+            for y in range(coords.shape[1])
+        ]
+        for x in range(coords.shape[0])
     ]
 
     return chunks
@@ -78,4 +97,4 @@ def _chunk_factory(
 @delayed
 def _assemble_delayed(chunks: list[list[NDArray]]) -> NDArray:
     """Assemble chunks (delayed)"""
-    return da.block(chunks)
+    return da.block(chunks, allow_unknown_chunksizes=True)
