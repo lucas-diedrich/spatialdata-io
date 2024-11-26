@@ -4,6 +4,7 @@ from typing import Any, Optional, Union
 
 import dask.array as da
 import numpy as np
+from dask import delayed
 from numpy.typing import NDArray
 from pylibCZIrw import czi as pyczi
 from spatialdata.models import Image2DModel
@@ -74,6 +75,7 @@ def _parse_pixel_type(slide: pyczi.CziReader, channels: Union[int, list[int]]) -
     return complex_pixel_spec, channel_dim
 
 
+@delayed
 def _get_img(
     slide: pyczi.CziReader,
     coords: tuple[int, int],
