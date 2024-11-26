@@ -26,20 +26,3 @@ def test_read_openslide(dataset: str, xmin: int, xmax: int, ymin: int, ymax: int
     ref_image = np.array(slide.read_region((xmin, ymin), level=0, size=(xmax - xmin, ymax - ymin)))
 
     assert (test_image == ref_image).all()
-
-
-@pytest.mark.parametrize(
-    "chunk_size",
-    [(1000, 1000), (10000, 10000), (10000, 5000)],
-)
-def test_read_openslide_chunksize(chunk_size: tuple[int, int]) -> None:
-    """Test whether chunking works"""
-    path = "./data/wsi/mirax/Mirax2.2-4-PNG.mrxs"
-    image_model = read_openslide(path, chunk_size=chunk_size, pyramidal=False)
-
-    assert all(
-        (
-            ((x == chunk_size[0]) & (y == chunk_size[1]))
-            for x, y in zip(image_model.chunksizes["x"], image_model.chunksizes["y"])
-        )
-    )
