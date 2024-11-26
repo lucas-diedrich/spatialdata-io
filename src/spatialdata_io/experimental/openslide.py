@@ -43,7 +43,7 @@ def _get_img(
     return np.array(img).T
 
 
-def read_wsi(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyramidal: bool = True) -> Image2DModel:
+def read_openslide(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyramidal: bool = True) -> Image2DModel:
     """Read WSI to Image2DModel
 
     Uses openslide to read multiple pathology slide representations and parse them
