@@ -62,6 +62,13 @@ pre = [
     "spatialdata>=0.1.0-pre0"
 ]
 
+# Make DVP an optional dependency for now
+dvp = [
+    "openslide-bin",
+    "openslide-python",
+    "pylibCZIrw"
+]
+
 [tool.coverage.run]
 source = ["spatialdata_io"]
 omit = [
