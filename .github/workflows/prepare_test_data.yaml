@@ -3,10 +3,12 @@ name: Prepare test data
 on:
     workflow_dispatch:
 # uncomment and adjust the branch name if you need to add new datasets to the artifact
-    push:
-        branches:
+    # push:
+    #     branches:
+    #         - main
+    pull_request:
+        branches: 
             - main
-
 jobs:
     prepare-data:
         runs-on: ubuntu-latest
