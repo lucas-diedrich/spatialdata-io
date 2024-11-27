@@ -50,6 +50,8 @@ jobs:
             - name: Install dependencies
               run: |
                   pip install --pre -e ".[dev,test]"
+            - name: Install experimental dependencies
+              run: pip install --pre -e ".[dvp]"
 
             - name: Download artifact of test data
               if: matrix.python == '3.10'
