@@ -15,7 +15,7 @@ from spatialdata_io.experimental.czi import read_czi
     ],
 )
 def test_read_czi(dataset: str, xmin: int, ymin: int, width: int, height: int) -> None:
-    path = f"./data/zeiss/zeiss/{dataset}"
+    path = f"./data/zeiss/{dataset}"
 
     # Get reference with CZI reader
     czidoc_r = pyczi.CziReader(path)
@@ -56,7 +56,7 @@ def test_read_czi_multichannel(
     channels: Union[int, list[int]],
     result_dim: int,
 ) -> None:
-    path = f"./data/zeiss/zeiss/{dataset}"
+    path = f"./data/zeiss/{dataset}"
 
     # Get reference with CZI reader
     czidoc_r = pyczi.CziReader(path)
