@@ -61,6 +61,6 @@ def test_read_czi_multichannel(
     xmin_czi, ymin_czi, total_width, total_height = czidoc_r.total_bounding_rectangle
 
     # Test function
-    array = read_czi(path, channels=channels)
+    array = read_czi(dataset, channels=channels)
 
     assert array.shape == (result_dim, total_width, total_height)
