@@ -3,9 +3,9 @@ name: Prepare test data
 on:
     workflow_dispatch:
 # uncomment and adjust the branch name if you need to add new datasets to the artifact
-#    push:
-#        branches:
-#            - main
+    push:
+        branches:
+            - main
 
 jobs:
     prepare-data:
@@ -20,13 +20,20 @@ jobs:
                   cd ./data
                   curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_human_Breast_2fov/Xenium_V1_human_Breast_2fov_outs.zip
                   curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_human_Lung_2fov/Xenium_V1_human_Lung_2fov_outs.zip
+                  curl -o openslide-mirax.zip https://openslide.cs.cmu.edu/download/openslide-testdata/Mirax/Mirax2.2-4-PNG.zip
+                  curl -o zeiss.zip https://datashare.biochem.mpg.de/s/k2C6sg0qrXBdWdc/download
 
             - name: Unzip files
               run: |
                   unzip ./data/Xenium_V1_human_Breast_2fov_outs.zip -d ./data/Xenium_V1_human_Breast_2fov_outs
                   unzip ./data/Xenium_V1_human_Lung_2fov_outs.zip -d ./data/Xenium_V1_human_Lung_2fov_outs
+                  unzip ./data/openslide-mirax.zip -d ./data/openslide-mirax
+                  unzip ./data/zeiss.zip -d ./data 
+
                   rm ./data/Xenium_V1_human_Breast_2fov_outs.zip
                   rm ./data/Xenium_V1_human_Lung_2fov_outs.zip
+                  rm ./data/openslide-mirax.zip
+                  rm ./data/zeiss.zip 
 
             - name: Upload artifacts
               uses: actions/upload-artifact@v3
