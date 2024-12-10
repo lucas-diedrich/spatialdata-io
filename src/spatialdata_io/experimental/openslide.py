@@ -43,7 +43,9 @@ def _get_img(
     return np.array(img).T
 
 
-def read_openslide(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyramidal: bool = True) -> Image2DModel:
+def read_openslide(
+    path: str, chunk_size: tuple[int, int] = (10000, 10000), pyramidal: bool = True
+) -> Image2DModel:
     """Read WSI to Image2DModel
 
     Uses openslide to read multiple pathology slide representations and parse them
@@ -94,18 +96,22 @@ def read_openslide(path: str, chunk_size: tuple[int, int] = (10000, 10000), pyra
         ]
 
     # Define coordinates for chunkwise loading of the slide
-    chunk_coords = _create_tiles(dimensions=dimensions, tile_size=chunk_size, min_coordinates=(0, 0))
+    chunk_coords = _create_tiles(
+        dimensions=dimensions, tile_size=chunk_size, min_coordinates=(0, 0)
+    )
 
     chunks = _chunk_factory(_get_img, slide=slide, coords=chunk_coords, level=0)
 
     # Assemble into a single dask array
     array_ = _assemble_delayed(chunks)
-    array = da.from_delayed(array_, shape=(4, *dimensions[::-1]), dtype=np.uint8).rechunk()
+    array = da.from_delayed(
+        array_, shape=(4, *dimensions[::-1]), dtype=np.uint8
+    ).rechunk()
 
     return Image2DModel.parse(
         array,
         dims="cyx",
-        c_coords="rgba",
+        c_coords=["r", "g", "b", "a"],
         scale_factors=scale_factors,
         chunks=chunk_size,
     )
