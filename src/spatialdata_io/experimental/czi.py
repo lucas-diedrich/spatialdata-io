@@ -23,12 +23,14 @@ class CZIPixelType(Enum):
     Gray8 = (1, np.uint8, None)
     Gray16 = (1, np.uint16, None)
     Gray32Float = (1, np.float32, None)
-    Bgr24 = (3, np.uint8, "rgb")
-    Bgr48 = (3, np.uint16, "rgb")
-    Bgr96Float = (3, np.float32, "rgb")
+    Bgr24 = (3, np.uint8, ["r", "g", "b"])
+    Bgr48 = (3, np.uint16, ["r", "g", "b"])
+    Bgr96Float = (3, np.float32, ["r", "g", "b"])
     Invalid = (np.nan, np.nan, np.nan)
 
-    def __init__(self, dimensionality: int, dtype: type, c_coords: Optional[str]) -> None:
+    def __init__(
+        self, dimensionality: int, dtype: type, c_coords: Optional[str]
+    ) -> None:
         self.dimensionality = dimensionality
         self.dtype = dtype
         self.c_coords = c_coords
@@ -45,7 +47,9 @@ class CZIPixelType(Enum):
         raise ValueError("Element not in defined types")
 
 
-def _parse_pixel_type(slide: pyczi.CziReader, channels: Union[int, list[int]]) -> tuple[Any, list[int]]:
+def _parse_pixel_type(
+    slide: pyczi.CziReader, channels: Union[int, list[int]]
+) -> tuple[Any, list[int]]:
     """Parse CZI channel info and return channel dimensionalities and pixel data types
 
     Parameters
@@ -81,6 +85,8 @@ def _get_img(
     coords: tuple[int, int],
     size: tuple[int, int],
     channel: int = 0,
+    timepoint: int = 0,
+    z_stack: int = 0,
 ) -> NDArray:
     """Return numpy array of slide region
 
@@ -94,6 +100,10 @@ def _get_img(
         Size of tile
     channel
         Channel of image
+    timepoint
+        Timepoint in image series (0 if only one timepoint exists)
+    z_stack
+        Z stack in z-series (0 if only one layer exists)
 
     Returns
     -------
@@ -160,7 +170,9 @@ def read_czi(
     xmin, ymin, width, height = czidoc_r.total_bounding_rectangle
 
     # Define coordinates for chunkwise loading of the slide
-    chunk_coords = _create_tiles(dimensions=(width, height), tile_size=chunk_size, min_coordinates=(xmin, ymin))
+    chunk_coords = _create_tiles(
+        dimensions=(width, height), tile_size=chunk_size, min_coordinates=(xmin, ymin)
+    )
 
     pixel_spec, channel_dim = _parse_pixel_type(slide=czidoc_r, channels=channels)
 
@@ -172,9 +184,14 @@ def read_czi(
                 Currently, only 1D channels are supported for multi-channel images"""
             )
 
-        chunks = [_chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=c) for c in channels]
+        chunks = [
+            _chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=c)
+            for c in channels
+        ]
     else:
-        chunks = _chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=channels)
+        chunks = _chunk_factory(
+            _get_img, slide=czidoc_r, coords=chunk_coords, channel=channels
+        )
 
     array_ = _assemble_delayed(chunks)
 
