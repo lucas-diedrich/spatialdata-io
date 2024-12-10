@@ -120,7 +120,7 @@ def _get_img(
     # M-index starts counting from zero to the number of tiles on that plane
     # S: Tag-like- tags images of similar interest
     img = slide.read(
-        plane={"C": channel},
+        plane={"C": channel, "T": timepoint, "Z": z_stack},
         roi=(
             coords[0],  # xmin (x)
             coords[1],  # ymin (y)
@@ -185,12 +185,24 @@ def read_czi(
             )
 
         chunks = [
-            _chunk_factory(_get_img, slide=czidoc_r, coords=chunk_coords, channel=c)
+            _chunk_factory(
+                _get_img,
+                slide=czidoc_r,
+                coords=chunk_coords,
+                channel=c,
+                timepoint=timepoint,
+                z_stack=z_stack,
+            )
             for c in channels
         ]
     else:
         chunks = _chunk_factory(
-            _get_img, slide=czidoc_r, coords=chunk_coords, channel=channels
+            _get_img,
+            slide=czidoc_r,
+            coords=chunk_coords,
+            channel=channels,
+            timepoint=timepoint,
+            z_stack=z_stack,
         )
 
     array_ = _assemble_delayed(chunks)
