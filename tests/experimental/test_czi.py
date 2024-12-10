@@ -11,7 +11,7 @@ from spatialdata_io.experimental.czi import read_czi
     [
         ("./data/zeiss/kabatnik2023_20211129_C1.czi", -170000, 40000, 10000, 10000),
         # Asymmetric
-        ("zeiss_multi-channel.czi", 0, 0, 1000, 1000),
+        ("./data/zeiss/zeiss_multi-channel.czi", 0, 0, 1000, 1000),
     ],
 )
 def test_read_czi(dataset: str, xmin: int, ymin: int, width: int, height: int) -> None:
