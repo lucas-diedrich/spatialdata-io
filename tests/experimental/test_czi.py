@@ -38,11 +38,11 @@ def test_read_czi(dataset: str, xmin: int, ymin: int, width: int, height: int) -
 
 
 @pytest.mark.parametrize(
-    ("dataset", "xmin", "ymin", "width", "height", "channels", "result_dim"),
+    ("dataset", "channels", "result_dim"),
     [
-        ("./data/zeiss/zeiss_multi-channel.czi", 0, 0, 1000, 1000, 0, 1),
-        ("./data/zeiss/zeiss_multi-channel.czi", 0, 0, 1000, 1000, [0], 1),
-        ("./data/zeiss/zeiss_multi-channel.czi", 0, 0, 1000, 1000, [0, 1], 2),
+        ("./data/zeiss/zeiss_multi-channel.czi", 0, 1),
+        ("./data/zeiss/zeiss_multi-channel.czi", [0], 1),
+        ("./data/zeiss/zeiss_multi-channel.czi", [0, 1], 2),
     ],
 )
 def test_read_czi_multichannel(
