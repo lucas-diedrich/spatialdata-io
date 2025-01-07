@@ -47,10 +47,6 @@ def test_read_czi(dataset: str, xmin: int, ymin: int, width: int, height: int) -
 )
 def test_read_czi_multichannel(
     dataset: str,
-    xmin: int,
-    ymin: int,
-    width: int,
-    height: int,
     channels: Union[int, list[int]],
     result_dim: int,
 ) -> None:
