@@ -45,17 +45,20 @@ def _create_tiles(
 
     # Generate the tiles
     tiles = np.array(
-        [[[x, y, w, h] for y, h in zip(y_positions, heights)] for x, w in zip(x_positions, widths)],
+        [
+            [[x, y, w, h] for y, h in zip(y_positions, heights)]
+            for x, w in zip(x_positions, widths)
+        ],
         dtype=int,
     )
     return tiles
 
 
-@delayed
 def _chunk_factory(
     func: Callable[..., NDArray],
     slide: Any,
     coords: NDArray,
+    n_channel: int,
     **func_kwargs: Mapping[str, Any],
 ) -> list[list[NDArray]]:
     """Abstract factory method to tile a large microscopy image.
@@ -69,6 +72,8 @@ def _chunk_factory(
     coords
         Coordinates of the upper left corner of the image in formt (n_row_x, n_row_y, 4)
         where the last dimension defines the rectangular tile in format (x, y, width, height)
+    n_channel
+        Number of channels in array (first dimension)
     func_kwargs
         Additional keyword arguments passed to func
     """
@@ -78,19 +83,23 @@ def _chunk_factory(
     # Inner list becomes dim=-1 (rows)
     # Outer list becomes dim=-2 (cols)
     # see dask.array.block
+
     chunks = [
         [
-            func(
-                slide,
-                coords=coords[x, y, [0, 1]],
-                size=coords[x, y, [2, 3]],
-                **func_kwargs,
+            da.from_delayed(
+                func(
+                    slide,
+                    coords=coords[x, y, [0, 1]],
+                    size=coords[x, y, [2, 3]],
+                    **func_kwargs,
+                ),
+                dtype=np.uint8,
+                shape=(n_channel, *coords[x, y, [2, 3]]),
             )
             for y in range(coords.shape[1])
         ]
         for x in range(coords.shape[0])
     ]
-
     return chunks
 
 
