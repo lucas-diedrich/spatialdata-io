@@ -3,7 +3,6 @@ from typing import Any, Callable
 
 import dask.array as da
 import numpy as np
-from dask import delayed
 from numpy.typing import NDArray
 
 
