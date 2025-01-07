@@ -7,7 +7,7 @@ from dask import delayed
 from numpy.typing import NDArray
 from spatialdata.models import Image2DModel
 
-from ._utils import _assemble_delayed, _chunk_factory, _create_tiles
+from ._utils import _assemble, _chunk_factory, _create_tiles
 
 
 @delayed
@@ -100,18 +100,17 @@ def read_openslide(
         dimensions=dimensions, tile_size=chunk_size, min_coordinates=(0, 0)
     )
 
-    chunks = _chunk_factory(_get_img, slide=slide, coords=chunk_coords, level=0)
+    chunks = _chunk_factory(
+        _get_img, slide=slide, coords=chunk_coords, n_channel=4, level=0
+    )
 
     # Assemble into a single dask array
-    array_ = _assemble_delayed(chunks)
-    array = da.from_delayed(
-        array_, shape=(4, *dimensions[::-1]), dtype=np.uint8
-    ).rechunk()
+    array = _assemble(chunks)
 
     return Image2DModel.parse(
         array,
         dims="cyx",
         c_coords=["r", "g", "b", "a"],
         scale_factors=scale_factors,
-        chunks=chunk_size,
+        chunks=(4, *chunk_size[::-1]),
     )
