@@ -3,12 +3,10 @@ name: Prepare test data
 on:
     workflow_dispatch:
 # uncomment and adjust the branch name if you need to add new datasets to the artifact
-    # push:
-    #     branches:
-    #         - main
-    pull_request:
-        branches: 
-            - main
+#    push:
+#        branches:
+#            - main
+
 jobs:
     prepare-data:
         runs-on: ubuntu-latest
@@ -24,8 +22,6 @@ jobs:
                   # 10x Genomics Xenium 2.0.0
                   curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_human_Breast_2fov/Xenium_V1_human_Breast_2fov_outs.zip
                   curl -O https://cf.10xgenomics.com/samples/xenium/2.0.0/Xenium_V1_human_Lung_2fov/Xenium_V1_human_Lung_2fov_outs.zip
-                  curl -o openslide-mirax.zip https://openslide.cs.cmu.edu/download/openslide-testdata/Mirax/Mirax2.2-4-PNG.zip
-                  curl -o zeiss.zip https://datashare.biochem.mpg.de/s/k2C6sg0qrXBdWdc/download
 
                   # 10x Genomics Xenium 3.0.0 (5K) Mouse ileum, multimodal cell segmentation
                   # this file seems to be corrupted; skipping it for now
