@@ -1,6 +1,7 @@
 from typing import Any
 
 import dask.array as da
+from dask import delayed
 import numpy as np
 import pytest
 from numpy.typing import NDArray
@@ -40,7 +41,9 @@ def test_create_tiles(
     min_coordinates: tuple[int, int],
     result: NDArray,
 ) -> None:
-    tiles = _create_tiles(dimensions=dimensions, tile_size=tile_size, min_coordinates=min_coordinates)
+    tiles = _create_tiles(
+        dimensions=dimensions, tile_size=tile_size, min_coordinates=min_coordinates
+    )
 
     assert (tiles == result).all()
 
@@ -75,13 +78,16 @@ def test_chunk_factory(
 ) -> None:
     """Test if tiles can be assembled to dask array"""
 
+    @delayed
     def func(slide: Any, coords: Any, size: tuple[int]) -> NDArray[np.int_]:
         """Create arrays in shape of tiles"""
-        return np.zeros(shape=size)
+        return da.zeros(shape=size)
 
-    coords = _create_tiles(dimensions=dimensions, tile_size=tile_size, min_coordinates=min_coordinates)
+    coords = _create_tiles(
+        dimensions=dimensions, tile_size=tile_size, min_coordinates=min_coordinates
+    )
 
-    tiles_ = _chunk_factory(func, slide=None, coords=coords).compute()
+    tiles_ = _chunk_factory(func, slide=None, coords=coords, n_channel=1)
     tiles = da.block(tiles_)
 
-    assert tiles.shape == dimensions
+    assert tiles.shape == (1, *dimensions)
