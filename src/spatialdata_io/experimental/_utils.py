@@ -103,7 +103,6 @@ def _chunk_factory(
     return chunks
 
 
-@delayed
-def _assemble_delayed(chunks: list[list[NDArray]]) -> NDArray:
+def _assemble(chunks: list[list[NDArray]]) -> NDArray:
     """Assemble chunks (delayed)"""
     return da.block(chunks, allow_unknown_chunksizes=True)
